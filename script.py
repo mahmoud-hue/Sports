@@ -1,24 +1,26 @@
 import feedparser
 import pandas as pd
 from datetime import datetime
+import urllib.parse  # مهم لتحويل الكلمات العربية في URL
 
-# 1) Keywords (واسعة زي ما اتفقنا)
+# 1️⃣ Keywords
 keywords = [
     "حادث مصر",
     "وفاة مصر",
     "غرق مصر",
     "حريق مصر",
     "سرقة مصر",
-    "اصابة مصر"
+    "إصابة مصر"
 ]
 
 all_news = []
 
-# 2) سحب الأخبار
+# 2️⃣ سحب الأخبار
 for keyword in keywords:
-    url = f"https://news.google.com/rss/search?q={keyword}&hl=ar&gl=EG&ceid=EG:ar"
+    safe_keyword = urllib.parse.quote(keyword)  # تحويل أي حرف عربي أو رموز لحروف URL صالحة
+    url = f"https://news.google.com/rss/search?q={safe_keyword}&hl=ar&gl=EG&ceid=EG:ar"
     feed = feedparser.parse(url)
-
+    
     for entry in feed.entries:
         all_news.append({
             "keyword": keyword,
@@ -27,17 +29,17 @@ for keyword in keywords:
             "التاريخ": entry.published
         })
 
-# 3) DataFrame
+# 3️⃣ إنشاء DataFrame
 df = pd.DataFrame(all_news)
 
-# 4) إزالة التكرار
+# 4️⃣ إزالة التكرار
 df.drop_duplicates(subset=["العنوان"], inplace=True)
 
-# 5) تحديد لو الخبر له علاقة بنادي/مركز شباب
+# 5️⃣ تحديد لو الخبر له علاقة بنادي/مركز شباب
 places = ["نادي", "مركز شباب"]
 df["متعلق بنادي/مركز"] = df["العنوان"].str.contains('|'.join(places))
 
-# 6) تصنيف نوع الحادث
+# 6️⃣ تصنيف نوع الحادث
 def classify(title):
     if "غرق" in title:
         return "غرق"
@@ -48,17 +50,17 @@ def classify(title):
     elif "وفاة" in title:
         return "وفاة"
     elif "إصابة" in title:
-        return "اصابة"
+        return "إصابة"
     else:
         return "حادث"
 
 df["نوع الحادث"] = df["العنوان"].apply(classify)
 
-# 7) ترتيب الأعمدة
+# 7️⃣ ترتيب الأعمدة
 df = df[["التاريخ", "العنوان", "نوع الحادث", "متعلق بنادي/مركز", "اللينك"]]
 
-# 8) حفظ Excel
-file_name = f"incidents_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+# 8️⃣ حفظ Excel
+file_name = "incidents.xlsx"  # بدون تاريخ عشان GitHub Runner يكتب بسهولة
 df.to_excel(file_name, index=False)
 
 print("تم إنشاء الملف بنجاح ✅")
