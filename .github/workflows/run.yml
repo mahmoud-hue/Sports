@@ -1,14 +1,11 @@
-name: Daily News Automation
+name: Test News Script
 
 on:
-  schedule:
-    - cron: '10 12 * * *'  # كل يوم الساعة 2:15 ظهر
-  workflow_dispatch:       # عشان تشغله يدوي كمان
+  workflow_dispatch:  # عشان تشغله يدوي
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
