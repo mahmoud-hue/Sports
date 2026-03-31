@@ -1,7 +1,7 @@
 import feedparser
 import pandas as pd
-from datetime import datetime, timedelta
-import urllib.parse  # مهم لتحويل الكلمات العربية في URL
+from datetime import datetime
+import urllib.parse  # لحل مشاكل URL
 
 # 1️⃣ Keywords لـ Google News فقط
 keywords = ["حادث", "وفاة", "غرق", "حريق", "سرقة", "إصابة"]
@@ -29,6 +29,7 @@ for keyword in keywords:
     feed = feedparser.parse(url)
     for entry in feed.entries:
         all_news.append({
+            "المصدر": "Google News",
             "العنوان": entry.title,
             "اللينك": urllib.parse.quote(entry.link, safe=':/?=&'),
             "التاريخ": entry.published if "published" in entry else datetime.now().strftime("%Y-%m-%d")
@@ -39,6 +40,7 @@ for url in rss_feeds:
     feed = feedparser.parse(url)
     for entry in feed.entries:
         all_news.append({
+            "المصدر": url,
             "العنوان": entry.title,
             "اللينك": urllib.parse.quote(entry.link, safe=':/?=&'),
             "التاريخ": entry.published if "published" in entry else datetime.now().strftime("%Y-%m-%d")
@@ -50,38 +52,16 @@ df = pd.DataFrame(all_news)
 # 6️⃣ إزالة التكرار
 df.drop_duplicates(subset=["العنوان"], inplace=True)
 
-# 7️⃣ تصنيف نوع الحادث
-def classify(title):
-    if "غرق" in title:
-        return "غرق"
-    elif "حريق" in title:
-        return "حريق"
-    elif "سرقة" in title:
-        return "سرقة"
-    elif "وفاة" in title:
-        return "وفاة"
-    elif "إصابة" in title:
-        return "إصابة"
-    else:
-        return None  # مش حادث
+# 🔹 بدون أي فلترة، نجرب نشوف الأخبار
+print("عدد الأخبار المجمعة:", len(df))
+print("أول 20 خبر:")
+print(df.head(20))
 
-df["نوع الحادث"] = df["العنوان"].apply(classify)
+# 7️⃣ ترتيب الأعمدة
+df = df[["المصدر", "التاريخ", "العنوان", "اللينك"]]
 
-# 8️⃣ تصفية الأخبار الحقيقية المرتبطة بالنوادي أو مراكز الشباب
-places = ["نادي", "مركز شباب"]
-df = df[df["نوع الحادث"].notna()]  # اخبار حقيقية فقط
-df = df[df["العنوان"].str.contains('|'.join(places))]  # النوادي أو مراكز الشباب
-
-# 9️⃣ تصفية أخبار اليوم السابق فقط
-yesterday = datetime.now() - timedelta(days=1)
-df['التاريخ'] = pd.to_datetime(df['التاريخ'], errors='coerce')
-df = df[df['التاريخ'].dt.date == yesterday.date()]
-
-# 🔟 ترتيب الأعمدة
-df = df[["التاريخ", "العنوان", "نوع الحادث", "اللينك"]]
-
-# 1️⃣1️⃣ حفظ Excel
-file_name = "incidents.xlsx"
+# 8️⃣ حفظ Excel لتجربة
+file_name = "test_incidents.xlsx"
 df.to_excel(file_name, index=False)
 
-print("تم إنشاء الملف بنجاح ✅")
+print("تم إنشاء الملف التجريبي بنجاح ✅")
