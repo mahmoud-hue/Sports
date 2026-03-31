@@ -2,7 +2,7 @@ name: Daily News Automation
 
 on:
   schedule:
-    - cron: '15 14 * * *'  # كل يوم الساعة 2:15 ظهر
+    - cron: '15 12 * * *'  # كل يوم الساعة 2:15 ظهر
   workflow_dispatch:       # عشان تشغله يدوي كمان
 
 jobs:
@@ -20,14 +20,13 @@ jobs:
 
       - name: Install libraries
         run: |
-          pip install feedparser pandas openpyxl gspread oauth2client
+          pip install feedparser pandas openpyxl
 
       - name: Run script
         run: python script.py
 
-      - name: Upload to Google Drive
-        uses: gdrive-org/gdrive-upload-action@v1
+      - name: Upload file as artifact
+        uses: actions/upload-artifact@v3
         with:
-          service_account_json: ${{ secrets.GDRIVE_CREDENTIALS }}
-          folder_id: "PUT_YOUR_FOLDER_ID_HERE"
-          src: "*.xlsx"
+          name: news-file
+          path: "*.xlsx"
