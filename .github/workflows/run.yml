@@ -2,7 +2,7 @@ name: Daily News Automation
 
 on:
   schedule:
-    - cron: '15 12 * * *'  # كل يوم الساعة 2:15 ظهر
+    - cron: '10 12 * * *'  # كل يوم الساعة 2:15 ظهر
   workflow_dispatch:       # عشان تشغله يدوي كمان
 
 jobs:
