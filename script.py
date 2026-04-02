@@ -4,53 +4,55 @@ import pandas as pd
 from datetime import datetime
 
 base_url = "https://www.youm7.com/Section/حوادث/203/"
-places = ["نادي", "مركز شباب", "صالة", "فرع نادي", "صالة رياضية"]
+
+places = ["نادي", "مركز شباب", "صالة", "صالة رياضية"]
 
 all_news = []
 
-# نلف على أول 5 صفحات
 for page in range(1, 6):
     print(f"Fetching page {page}...")
     url = base_url + str(page)
+
     try:
         response = requests.get(url, timeout=20)
         response.raise_for_status()
     except Exception as e:
-        print(f"خطأ في تحميل الصفحة {page}: {e}")
+        print(f"Error in page {page}: {e}")
         continue
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # في الصفحة الحقيقية العناوين بتكون داخل عناوين H3 تحت القسم
-    # HTML يمكن يكون مختلف شوية، فحنجيب كل ال<a> اللي بتقف داخل الحوادث
-    articles = soup.select("##main-container a")  # selector واسع
+    # هنا بقى بنجيب كل لينكات الأخبار بشكل عام
+    links = soup.find_all("a")
 
-    for a_tag in articles:
-        title = a_tag.get_text(strip=True)
-        href = a_tag.get("href")
+    for link in links:
+        title = link.get_text(strip=True)
+        href = link.get("href")
 
-        # بعض النصوص ممكن ميبقاش عنوان خبر، نتأكد انه نص واضح
-        if not title or len(title) < 5:
+        # فلترة العناوين الحقيقية بس
+        if not title or len(title) < 20:
             continue
 
-        # تاريخ بسيط هيتم تحليله بعدها
-        date_text = ""  # ممكن نضيف لو نقدر نطلع التاريخ من DOM لاحقًا
-        published = datetime.now().strftime("%d/%m/%Y")
+        # لازم يكون لينك خبر
+        if not href or "/story/" not in href:
+            continue
+
+        full_link = "https://www.youm7.com" + href
 
         related = any(word in title for word in places)
 
         all_news.append({
-            "التاريخ": published,
+            "التاريخ": datetime.now().strftime("%d/%m/%Y"),
             "العنوان": title,
             "متعلق بنادي/مركز": related,
-            "اللينك": href
+            "اللينك": full_link
         })
 
-# تحويل ل DataFrame
+# إزالة التكرار
 df = pd.DataFrame(all_news).drop_duplicates(subset=["العنوان"])
 
-print(f"عدد الأخبار المتجمعة: {len(df)}")
+print("عدد الأخبار:", len(df))
 
-df.to_excel("youm7_incidents_clubs.xlsx", index=False)
+df.to_excel("final_incidents.xlsx", index=False)
 
-print("تم إنشاء الملف بنجاح! ✅")
+print("تم إنشاء الملف ✅")
