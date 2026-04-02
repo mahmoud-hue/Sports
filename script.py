@@ -1,32 +1,53 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+from datetime import datetime, timedelta
 
-url = "https://www.youm7.com/Section/حوادث/203/1"
+base_url = "https://www.youm7.com/Section/حوادث/203/"
 
-response = requests.get(url)
-soup = BeautifulSoup(response.content, "html.parser")
+all_news = []
 
-news_list = []
+# آخر شهرين
+two_months_ago = datetime.now() - timedelta(days=60)
 
-# الأخبار في اليوم السابع بتكون غالبًا في h3 جوا div فيه class فيه "title"
-for item in soup.find_all("h3"):
-    a_tag = item.find("a")
-    
-    if a_tag and a_tag.get("href"):
-        title = a_tag.text.strip()
-        link = "https://www.youm7.com" + a_tag.get("href")
+page = 1
 
-        news_list.append({
-            "العنوان": title,
-            "اللينك": link
-        })
+while True:
+    print(f"Page {page}")
 
-df = pd.DataFrame(news_list)
+    url = base_url + str(page)
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    items = soup.find_all("h3")
+
+    if not items:
+        break
+
+    for item in items:
+        a_tag = item.find("a")
+
+        if a_tag and a_tag.get("href"):
+            title = a_tag.text.strip()
+            link = "https://www.youm7.com" + a_tag.get("href")
+
+            # فلتر النوادي ومراكز الشباب
+            if "نادي" in title or "مركز شباب" in title:
+                all_news.append({
+                    "العنوان": title,
+                    "اللينك": link
+                })
+
+    # وقف بعد 5 صفحات (مبدئيًا عشان الأداء)
+    if page == 5:
+        break
+
+    page += 1
+
+df = pd.DataFrame(all_news)
 
 print("عدد الأخبار:", len(df))
-print(df.head(10))
 
-df.to_excel("youm7_test.xlsx", index=False)
+df.to_excel("youm7_filtered.xlsx", index=False)
 
 print("تم إنشاء الملف ✅")
