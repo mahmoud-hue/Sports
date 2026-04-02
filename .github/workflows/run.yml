@@ -17,7 +17,8 @@ jobs:
 
       - name: Install libraries
         run: |
-          pip install feedparser pandas openpyxl
+          pip install --upgrade pip
+          pip install feedparser pandas openpyxl requests beautifulsoup4
 
       - name: Run script
         run: python script.py
