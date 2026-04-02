@@ -1,77 +1,32 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from datetime import datetime, timedelta
 
-base_url = "https://www.youm7.com/Section/حوادث/203/"
+url = "https://www.youm7.com/Section/حوادث/203/1"
 
-all_news = []
+response = requests.get(url)
+soup = BeautifulSoup(response.content, "html.parser")
 
-# تاريخ من شهرين
-two_months_ago = datetime.now() - timedelta(days=60)
+news_list = []
 
-page = 1
-
-while True:
-    print(f"جاري سحب الصفحة {page}...")
-
-    url = base_url + str(page)
-    response = requests.get(url)
+# الأخبار في اليوم السابع بتكون غالبًا في h3 جوا div فيه class فيه "title"
+for item in soup.find_all("h3"):
+    a_tag = item.find("a")
     
-    if response.status_code != 200:
-        print("فشل تحميل الصفحة")
-        break
+    if a_tag and a_tag.get("href"):
+        title = a_tag.text.strip()
+        link = "https://www.youm7.com" + a_tag.get("href")
 
-    soup = BeautifulSoup(response.content, "html.parser")
+        news_list.append({
+            "العنوان": title,
+            "اللينك": link
+        })
 
-    articles = soup.find_all("div", class_="story")
-
-    if not articles:
-        print("مفيش أخبار تاني")
-        break
-
-    stop = False
-
-    for article in articles:
-        try:
-            title_tag = article.find("h3")
-            link_tag = article.find("a")
-            date_tag = article.find("span", class_="time")
-
-            title = title_tag.text.strip() if title_tag else ""
-            link = "https://www.youm7.com" + link_tag.get("href") if link_tag else ""
-            date_text = date_tag.text.strip() if date_tag else ""
-
-            # تحويل التاريخ
-            date = datetime.strptime(date_text, "%d/%m/%Y")
-
-            # وقف عند آخر شهرين
-            if date < two_months_ago:
-                stop = True
-                break
-
-            all_news.append({
-                "التاريخ": date,
-                "العنوان": title,
-                "اللينك": link
-            })
-
-        except:
-            continue
-
-    if stop:
-        print("وصلنا لأخبار أقدم من شهرين، وقفنا")
-        break
-
-    page += 1
-
-
-# تحويل لـ DataFrame
-df = pd.DataFrame(all_news)
+df = pd.DataFrame(news_list)
 
 print("عدد الأخبار:", len(df))
+print(df.head(10))
 
-# حفظ Excel
-df.to_excel("youm7_incidents.xlsx", index=False)
+df.to_excel("youm7_test.xlsx", index=False)
 
-print("تم إنشاء الملف بنجاح ✅")
+print("تم إنشاء الملف ✅")
