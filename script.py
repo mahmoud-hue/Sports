@@ -3,61 +3,54 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 
-# الكلمات المفتاحية لتحديد الأخبار المتعلقة بالنوادي/مراكز الشباب
-places = ["نادي", "مركز شباب", "صالة رياضية"]
+base_url = "https://www.youm7.com/Section/حوادث/203/"
+places = ["نادي", "مركز شباب", "صالة", "فرع نادي", "صالة رياضية"]
 
-# تاريخ البداية
-start_date = datetime(2026, 3, 1)
-
-# صفحة الحوادث اليوم السابع
-base_url = "https://www.youm7.com/Section/حوادث"
-
-# القائمة النهائية للأخبار
 all_news = []
 
-# صفحات نبدأ بيها (مثلاً أول 5 صفحات للتجربة)
-num_pages = 8
-
-for page in range(1, num_pages + 1):
-    url = f"{base_url}?page={page}"
-    print(f"جاري فتح الصفحة {page}...")
+# نلف على أول 5 صفحات
+for page in range(1, 6):
+    print(f"Fetching page {page}...")
+    url = base_url + str(page)
     try:
-        response = requests.get(url, timeout=10)
-        if response.status_code != 200:
-            print(f"فشل فتح الصفحة {page}، status code: {response.status_code}")
-            continue
+        response = requests.get(url, timeout=20)
+        response.raise_for_status()
     except Exception as e:
-        print(f"حدث خطأ في الصفحة {page}: {e}")
+        print(f"خطأ في تحميل الصفحة {page}: {e}")
         continue
 
     soup = BeautifulSoup(response.text, "html.parser")
-    
-    # كل خبر في الصفحة
-    articles = soup.find_all("div", class_="newsTitle")  # تأكد من class حسب HTML الفعلي
-    
-    for art in articles:
-        title_tag = art.find("a")
-        if not title_tag:
-            continue
-        title = title_tag.get_text(strip=True)
-        link = title_tag.get("href")
-        
-        # بعض الأخبار ممكن تحتوي على span للتاريخ أو div آخر حسب الصفحة
-        # نجرب ناخد التاريخ من اليوم الحالي كبديل إذا مش موجود
-        published = datetime.now()
-        
-        # فلترة حسب التاريخ
-        if published >= start_date:
-            related = any(word in title for word in places)
-            all_news.append({
-                "التاريخ": published.strftime("%d/%m/%Y"),
-                "العنوان": title,
-                "متعلق بنادي/مركز": related,
-                "اللينك": link
-            })
 
-# تحويل ل DataFrame وحفظ Excel
-df = pd.DataFrame(all_news)
-print(f"عدد الأخبار بعد التصفية: {len(df)}")
+    # في الصفحة الحقيقية العناوين بتكون داخل عناوين H3 تحت القسم
+    # HTML يمكن يكون مختلف شوية، فحنجيب كل ال<a> اللي بتقف داخل الحوادث
+    articles = soup.select("##main-container a")  # selector واسع
+
+    for a_tag in articles:
+        title = a_tag.get_text(strip=True)
+        href = a_tag.get("href")
+
+        # بعض النصوص ممكن ميبقاش عنوان خبر، نتأكد انه نص واضح
+        if not title or len(title) < 5:
+            continue
+
+        # تاريخ بسيط هيتم تحليله بعدها
+        date_text = ""  # ممكن نضيف لو نقدر نطلع التاريخ من DOM لاحقًا
+        published = datetime.now().strftime("%d/%m/%Y")
+
+        related = any(word in title for word in places)
+
+        all_news.append({
+            "التاريخ": published,
+            "العنوان": title,
+            "متعلق بنادي/مركز": related,
+            "اللينك": href
+        })
+
+# تحويل ل DataFrame
+df = pd.DataFrame(all_news).drop_duplicates(subset=["العنوان"])
+
+print(f"عدد الأخبار المتجمعة: {len(df)}")
+
 df.to_excel("youm7_incidents_clubs.xlsx", index=False)
-print("تم إنشاء الملف ✅")
+
+print("تم إنشاء الملف بنجاح! ✅")
