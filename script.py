@@ -1,127 +1,132 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from datetime import datetime
 
 all_news = []
 
-# =========================
-# 🔵 1) Youm7
-# =========================
-print("Youm7...")
-for page in range(1, 6):
-    url = f"https://www.youm7.com/Section/حوادث/203/{page}"
+places = ["نادي", "مركز شباب", "ملعب", "حمام سباحة", "صالة"]
+incidents = ["غرق", "حريق", "إصابة", "وفاة", "حادث", "اختناق"]
+
+# ======================
+# 🟢 YOUm7
+# ======================
+def scrape_youm7():
+    base_url = "https://www.youm7.com/Section/حوادث/203/"
+    results = []
+
+    for page in range(1, 4):
+        url = base_url + str(page)
+        try:
+            res = requests.get(url, timeout=20)
+            soup = BeautifulSoup(res.content, "html.parser")
+
+            for item in soup.find_all("h3"):
+                a = item.find("a")
+                if a:
+                    title = a.text.strip()
+                    link = "https://www.youm7.com" + a.get("href")
+
+                    if any(p in title for p in places) and any(i in title for i in incidents):
+                        results.append({"العنوان": title, "اللينك": link})
+        except:
+            continue
+
+    return results
+
+# ======================
+# 🟢 CAIRO24
+# ======================
+def scrape_cairo24():
+    url = "https://www.cairo24.com"
+    results = []
+
     try:
-        res = requests.get(url, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, timeout=20)
+        soup = BeautifulSoup(res.content, "html.parser")
+
+        for a in soup.find_all("a"):
+            title = a.text.strip()
+            link = a.get("href")
+
+            if link and "cairo24" in link:
+                if any(p in title for p in places) and any(i in title for i in incidents):
+                    results.append({"العنوان": title, "اللينك": link})
     except:
-        continue
+        pass
 
-    for a in soup.find_all("a"):
-        title = a.get_text(strip=True)
-        href = a.get("href")
+    return results
 
-        if not title or len(title) < 20:
-            continue
-        if not href or "/story/" not in href:
-            continue
+# ======================
+# 🟢 SHOROUK
+# ======================
+def scrape_shorouk():
+    url = "https://www.shorouknews.com"
+    results = []
 
-        all_news.append({
-            "المصدر": "Youm7",
-            "التاريخ": datetime.now().strftime("%d/%m/%Y"),
-            "العنوان": title,
-            "اللينك": "https://www.youm7.com" + href
-        })
-
-# =========================
-# 🟠 2) ElBalad
-# =========================
-print("ElBalad...")
-for page in range(1, 4):
-    url = f"https://www.elbalad.news/Section/195/{page}"
     try:
-        res = requests.get(url, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, timeout=20)
+        soup = BeautifulSoup(res.content, "html.parser")
+
+        for a in soup.find_all("a"):
+            title = a.text.strip()
+            link = a.get("href")
+
+            if link and "shorouknews" in link:
+                if any(p in title for p in places) and any(i in title for i in incidents):
+                    results.append({"العنوان": title, "اللينك": link})
     except:
-        continue
+        pass
 
-    for a in soup.find_all("a"):
-        title = a.get_text(strip=True)
-        href = a.get("href")
+    return results
 
-        if not title or len(title) < 20:
-            continue
-        if not href or not href.startswith("http"):
-            continue
+# ======================
+# 🟢 ELWATAN
+# ======================
+def scrape_watan():
+    url = "https://www.elwatannews.com"
+    results = []
 
-        all_news.append({
-            "المصدر": "ElBalad",
-            "التاريخ": datetime.now().strftime("%d/%m/%Y"),
-            "العنوان": title,
-            "اللينك": href
-        })
+    try:
+        res = requests.get(url, timeout=20)
+        soup = BeautifulSoup(res.content, "html.parser")
 
-# =========================
-# 🟢 3) Masrawy (سريع جدًا)
-# =========================
-print("Masrawy...")
-try:
-    res = requests.get("https://www.masrawy.com/news/news_cases", timeout=15)
-    soup = BeautifulSoup(res.text, "html.parser")
+        for a in soup.find_all("a"):
+            title = a.text.strip()
+            link = a.get("href")
 
-    for a in soup.find_all("a"):
-        title = a.get_text(strip=True)
-        href = a.get("href")
+            if link and "elwatannews" in link:
+                if any(p in title for p in places) and any(i in title for i in incidents):
+                    results.append({"العنوان": title, "اللينك": link})
+    except:
+        pass
 
-        if not title or len(title) < 20:
-            continue
-        if not href or "/news/" not in href:
-            continue
+    return results
 
-        full_link = href if href.startswith("http") else "https://www.masrawy.com" + href
+# ======================
+# 🚀 RUN ALL
+# ======================
 
-        all_news.append({
-            "المصدر": "Masrawy",
-            "التاريخ": datetime.now().strftime("%d/%m/%Y"),
-            "العنوان": title,
-            "اللينك": full_link
-        })
-except:
-    pass
+print("تشغيل اليوم السابع...")
+all_news.extend(scrape_youm7())
 
-# =========================
-# 🟣 4) AlWatan
-# =========================
-print("AlWatan...")
-try:
-    res = requests.get("https://www.elwatannews.com/section/115", timeout=15)
-    soup = BeautifulSoup(res.text, "html.parser")
+print("تشغيل القاهرة 24...")
+all_news.extend(scrape_cairo24())
 
-    for a in soup.find_all("a"):
-        title = a.get_text(strip=True)
-        href = a.get("href")
+print("تشغيل الشروق...")
+all_news.extend(scrape_shorouk())
 
-        if not title or len(title) < 20:
-            continue
-        if not href or not href.startswith("http"):
-            continue
+print("تشغيل الوطن...")
+all_news.extend(scrape_watan())
 
-        all_news.append({
-            "المصدر": "AlWatan",
-            "التاريخ": datetime.now().strftime("%d/%m/%Y"),
-            "العنوان": title,
-            "اللينك": href
-        })
-except:
-    pass
+# ======================
+# 📊 SAVE
+# ======================
 
-# =========================
-# 📊 تنظيف البيانات
-# =========================
-df = pd.DataFrame(all_news).drop_duplicates(subset=["العنوان"])
+df = pd.DataFrame(all_news)
+df.drop_duplicates(inplace=True)
 
 print("عدد الأخبار:", len(df))
 
-df.to_excel("EGYPT_INCIDENTS_LIVE.xlsx", index=False)
+df.to_excel("final_news.xlsx", index=False)
 
-print("تم إنشاء الملف ✅")
+print("تم إنشاء الملف النهائي ✅")
