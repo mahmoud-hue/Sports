@@ -1,62 +1,59 @@
-import feedparser
+import requests
 import pandas as pd
-from datetime import datetime
-import urllib.parse
+from datetime import datetime, timedelta
 
-# ==========================
-# 🔥 كلمات البحث الرئيسية (أحداث فعلية في النوادي)
-queries = [
-    "حادث نادي مصر",
-    "حريق نادي مصر",
-    "غرق نادي مصر",
-    "حادث مركز شباب مصر",
-    "حريق مركز شباب مصر",
-    "إصابة مركز شباب مصر",
-    "حادث ملعب مصر"
-]
+API_KEY = "5e999ed60e344940a89b94fd4a8291b3"
 
-# ==========================
-# ❌ كلمات نستبعدها (نعي/تعزية/تكريم...)
-exclude_words = ["تعزية", "وفاة لاعب", "تكريم", "نعي", "ذكرى", "تكريم"]
+query = "حادث نادي OR حريق نادي OR غرق نادي OR حادث مركز شباب OR إصابة ملعب"
 
-# ==========================
+start_date = datetime(2026, 3, 1)
+end_date = datetime(2026, 3, 31)
+
 all_news = []
-start_date = datetime(2026, 1, 1)
+
+exclude_words = ["تعزية", "نعي", "تكريم", "وفاة لاعب", "يهنئ", "احتفال"]
+
+current_date = start_date
+
+while current_date <= end_date:
+    next_date = current_date + timedelta(days=1)
+
+    from_date = current_date.strftime("%Y-%m-%d")
+    to_date = next_date.strftime("%Y-%m-%d")
+
+    print(f"جاري جلب أخبار يوم: {from_date}")
+
+    url = f"https://newsapi.org/v2/everything?q={query}&language=ar&from={from_date}&to={to_date}&sortBy=publishedAt&apiKey={API_KEY}"
+
+    response = requests.get(url)
+    data = response.json()
+
+    articles = data.get("articles", [])
+
+    for article in articles:
+        title = article["title"]
+        link = article["url"]
+        date = article["publishedAt"]
+
+        if not any(word in title for word in exclude_words):
+            all_news.append({
+                "التاريخ": date,
+                "العنوان": title,
+                "اللينك": link
+            })
+
+    current_date = next_date
 
 # ==========================
-for q in queries:
-    encoded = urllib.parse.quote(q)
-    url = f"https://news.google.com/rss/search?q={encoded}&hl=ar&gl=EG&ceid=EG:ar"
-    feed = feedparser.parse(url)
-
-    print(f"جارٍ فتح الأخبار لـ: {q} ... عدد الأخبار: {len(feed.entries)}")
-
-    for entry in feed.entries:
-        if hasattr(entry, "published_parsed"):
-            date = datetime(*entry.published_parsed[:6])
-        else:
-            continue
-
-        # فلترة حسب التاريخ
-        if date >= start_date:
-            title = entry.title
-
-            # فلترة حسب الكلمات المستبعدة
-            if not any(word in title for word in exclude_words):
-                all_news.append({
-                    "التاريخ": date.strftime("%Y-%m-%d"),
-                    "العنوان": title,
-                    "اللينك": entry.link
-                })
-
-# ==========================
+# تحويل ل DataFrame
 df = pd.DataFrame(all_news)
+
+# إزالة التكرار
 df.drop_duplicates(inplace=True)
 
-print("عدد الأخبار الدقيقة:", len(df))
+print("إجمالي الأخبار:", len(df))
 
-# ==========================
-file_name = f"news_precise_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
-df.to_excel(file_name, index=False)
+# حفظ
+df.to_excel("march_full_news.xlsx", index=False)
 
-print(f"تم إنشاء الملف بنجاح ✅: {file_name}")
+print("تم إنشاء الملف الكامل لشهر مارس ✅")
